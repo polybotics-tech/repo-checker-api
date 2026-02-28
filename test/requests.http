@@ -1,0 +1,11 @@
+GET http://localhost:3000/
+
+###
+
+POST http://localhost:3000/v1/analyze
+Content-Type: application/json
+
+{
+    "url": "https://github.com/thisisyinka/opay-nodejs-sdk",
+    "listPackages": true
+}
