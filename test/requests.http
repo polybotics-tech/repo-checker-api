@@ -6,6 +6,6 @@ POST http://localhost:3000/v1/analyze-js
 Content-Type: application/json
 
 {
-    "url": "https://github.com/polybotics-tech/doc-inbox"
-    //"listPackages": true
+    "url": "https://github.com/polybotics-tech/doc-inbox",
+    "listPackages": false
 } 

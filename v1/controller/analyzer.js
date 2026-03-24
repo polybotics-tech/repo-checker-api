@@ -3,6 +3,7 @@ import {
   githubAnalyzer,
   githubSummarizer,
   npmRegistryValidator,
+  npmSummarizer,
 } from "../services/analyzer.js";
 import { SuccessResponse } from "../utils/response.js";
 import { fnTryCatch } from "../utils/trycatch.js";
@@ -28,7 +29,8 @@ export const analyzeJsRepository = fnTryCatch(
     //--verify if "npm" tagged packages (and version) exist in registry
     const verifiedPackages = await npmRegistryValidator(sourcedPackages);
 
-    // TODO: generate NPM feedback summary
+    //--generate NPM security feedback summary
+    const npmSummary = await npmSummarizer(verifiedPackages);
 
     SuccessResponse(res, {
       message: "Repository analyzed successfully",
@@ -41,6 +43,7 @@ export const analyzeJsRepository = fnTryCatch(
         },
         summary: {
           github: githubSummary,
+          npm: npmSummary,
         },
         packages: listPackages ? verifiedPackages : null,
       },
