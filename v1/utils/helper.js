@@ -1,10 +1,12 @@
 import pLimit from "p-limit";
+import semver from "semver";
 import constants from "../constants.js";
 import { instance } from "../lib/axios.js";
 import { urlGenerator } from "./generator.js";
 import { ForbiddenError } from "../middleware/error.js";
+import { isCacheValid } from "../lib/cache.js";
 
-export const promiseLimiter = pLimit({ concurrency: 5 });
+export const promiseLimiter = pLimit(10);
 
 export function isUrlAcceptable(url) {
   const match = url.match(constants.GITHUB_URL_REGEX);
@@ -67,11 +69,11 @@ export async function fetchRepoGitTree(options = { owner, repo, branch }) {
 }
 
 export function extractPackageJsonPathsFromTree(tree) {
-  const packageJsonPaths = tree
+  const paths = tree
     .filter((file) => file.path.endsWith("package.json"))
     .map((file) => file.path);
 
-  return packageJsonPaths;
+  return paths;
 }
 
 export async function readPackageJson(options = { owner, repo, path }) {
@@ -107,4 +109,43 @@ export function extractDependencies(packageJson) {
     dependencies: depObjToArr(dependencies),
     devDependencies: depObjToArr(devDependencies),
   };
+}
+
+export function checkVersionExists(versions = [], versionRange) {
+  if (!versions) return false;
+
+  //--exact version
+  if (versions.includes(versionRange)) return true;
+
+  //--version range (^1.0.0, ~1.2.0, etc.)
+  const matched = semver.maxSatisfying(versions, versionRange);
+
+  return !!matched;
+}
+
+export async function fetchNpmPackage(name, CACHE) {
+  try {
+    const cachedPackage = CACHE[name];
+
+    //--use cache if valid
+    if (cachedPackage && isCacheValid(cachedPackage)) {
+      return cachedPackage;
+    } else {
+      //--otherwise fetch from npm registry
+      const res = await instance.get(urlGenerator.npmPackageRegistry(name));
+
+      const newEntry = {
+        exists: true,
+        versions: Object.keys(res.data.versions) || [],
+        cachedAt: Date.now(),
+      };
+
+      CACHE[name] = newEntry;
+
+      return newEntry;
+    }
+  } catch (err) {
+    //--timeout / other error
+    return { exists: false, versions: [] };
+  }
 }

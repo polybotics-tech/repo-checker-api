@@ -3,3 +3,6 @@ logs/
 
 .env
 package-lock.json
+
+
+test/doc.txt

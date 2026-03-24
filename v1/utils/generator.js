@@ -9,4 +9,5 @@ export const urlGenerator = {
     `${githubRepo(owner, name)}/git/trees/${branch}?recursive=1`,
   githubRepoContents: (owner, name, file) =>
     `${githubRepo(owner, name)}/contents/${file}`,
+  npmPackageRegistry: (name) => `${constants.NPM_REGISTRY_URL}/${name}`,
 };

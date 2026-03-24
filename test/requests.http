@@ -2,10 +2,10 @@ GET http://localhost:3000/
 
 ###
 
-POST http://localhost:3000/v1/analyze
+POST http://localhost:3000/v1/analyze-js
 Content-Type: application/json
 
 {
-    "url": "https://github.com/thisisyinka/opay-nodejs-sdk",
-    "listPackages": true
-}
+    "url": "https://github.com/polybotics-tech/doc-inbox"
+    //"listPackages": true
+} 

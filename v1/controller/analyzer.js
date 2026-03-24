@@ -1,14 +1,17 @@
 import {
+  filterPackageSource,
   githubAnalyzer,
-  githubPackageSummarizer,
+  githubSummarizer,
+  npmRegistryValidator,
 } from "../services/analyzer.js";
 import { SuccessResponse } from "../utils/response.js";
 import { fnTryCatch } from "../utils/trycatch.js";
 
-export const analyzeRepository = fnTryCatch(
+export const analyzeJsRepository = fnTryCatch(
   async (req, res) => {
     const { url, listPackages } = req.body;
 
+    //--get (github) repo info and package.json contents
     const {
       platform,
       owner,
@@ -16,9 +19,14 @@ export const analyzeRepository = fnTryCatch(
       packageList,
     } = await githubAnalyzer(url);
 
-    const githubSummary = await githubPackageSummarizer(packageList);
+    //--draft quick overview of repo
+    const githubSummary = await githubSummarizer(packageList);
 
-    // TODO: verify is packages exist on NPM registry
+    //--identify dependency sources and tag them
+    const sourcedPackages = await filterPackageSource(packageList);
+
+    //--verify if "npm" tagged packages (and version) exist in registry
+    const verifiedPackages = await npmRegistryValidator(sourcedPackages);
 
     // TODO: generate NPM feedback summary
 
@@ -34,7 +42,7 @@ export const analyzeRepository = fnTryCatch(
         summary: {
           github: githubSummary,
         },
-        packages: listPackages ? packageList : null,
+        packages: listPackages ? verifiedPackages : null,
       },
     });
   },

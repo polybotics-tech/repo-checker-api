@@ -20,6 +20,7 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.2.1",
     "node-file-logger": "^0.9.5",
-    "p-limit": "^7.3.0"
+    "p-limit": "^7.3.0",
+    "semver": "^7.7.4"
   }
 }

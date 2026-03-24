@@ -1,13 +1,22 @@
 import { BadRequestError, NotFoundError } from "../middleware/error.js";
 import {
+  checkVersionExists,
   extractDependencies,
   extractPackageJsonPathsFromTree,
   extractRepoInfoFromUrl,
+  fetchNpmPackage,
   fetchRepoGitTree,
   fetchRepoInfo,
   isUrlAcceptable,
+  promiseLimiter,
   readPackageJson,
 } from "../utils/helper.js";
+import constants from "../constants.js";
+import {
+  deleteExpiredCache,
+  readFromCache,
+  saveToCache,
+} from "../lib/cache.js";
 
 export async function githubAnalyzer(url) {
   if (!url || typeof url !== "string") {
@@ -84,7 +93,7 @@ export async function githubAnalyzer(url) {
   };
 }
 
-export async function githubPackageSummarizer(packageList = []) {
+export async function githubSummarizer(packageList = []) {
   let summary = {
     num_of_package_json: 0,
     package_json_paths: [],
@@ -116,7 +125,142 @@ export async function githubPackageSummarizer(packageList = []) {
     summary.total_num_of_dev_dependencies += numOfDevDeps;
   });
 
-  console.log("[log] summary: ", JSON.stringify(summary), "\n. \n. \n. \n.");
+  console.log("[log] done summarizing... ", "\n. \n. \n. \n.");
 
   return summary;
+}
+
+export async function filterPackageSource(packageList = []) {
+  const filteredPackageList = packageList.map((pkg) => {
+    const { path, dependencies, devDependencies } = pkg;
+
+    console.log("[action] filtering dependencies source...");
+    //--
+    const newDependencies = dependencies.map((dep) => {
+      const { name, version } = dep;
+
+      let source = "";
+
+      if (constants.NON_NPM_VERSION_REGEX.test(version)) {
+        //-- package version does not resemble npm format
+
+        if (/^file:/.test(version)) {
+          source = "local";
+        } else if (/^(git\+|github:)/.test(version)) {
+          source = "git";
+        } else if (/^https?:/.test(version)) {
+          source = "url";
+        } else if (/^workspace:/.test(version)) {
+          source = "workspace";
+        } else {
+          source = "unknown";
+        }
+      } else {
+        //--looks like npm package version. check package name type
+
+        if (!constants.NPM_PACKAGE_NAME_REGEX.test(name)) {
+          source = "unknown";
+        } else {
+          source = "npm";
+        }
+      }
+
+      return { name, version, source };
+    });
+
+    console.log("[action] filtering dev dependencies source...");
+    //--
+    const newDevDependencies = devDependencies.map((dep) => {
+      const { name, version } = dep;
+
+      let source = "";
+
+      if (constants.NON_NPM_VERSION_REGEX.test(version)) {
+        //-- package version does not resemble npm format
+
+        if (/^file:/.test(version)) {
+          source = "local";
+        } else if (/^(git\+|github:)/.test(version)) {
+          source = "git";
+        } else if (/^https?:/.test(version)) {
+          source = "url";
+        } else if (/^workspace:/.test(version)) {
+          source = "workspace";
+        } else {
+          source = "unknown";
+        }
+      } else {
+        //--looks like npm package version. check package name type
+
+        if (!constants.NPM_PACKAGE_NAME_REGEX.test(name)) {
+          source = "unknown";
+        } else {
+          source = "npm";
+        }
+      }
+
+      return { name, version, source };
+    });
+
+    return {
+      path,
+      dependencies: newDependencies,
+      devDependencies: newDevDependencies,
+    };
+  });
+
+  return filteredPackageList;
+}
+
+export async function npmRegistryValidator(packageList = []) {
+  const CACHE_PATH = constants.CACHE_PATH_NPM;
+
+  const CACHE = await readFromCache(CACHE_PATH);
+
+  const promiseResult = await Promise.all(
+    packageList.map(async (pkg) => {
+      //--process each concurrently dependencies
+      const processDeps = async (deps = []) => {
+        return Promise.all(
+          deps.map((dep) =>
+            promiseLimiter(async () => {
+              if (dep.source !== "npm") {
+                return { ...dep, versionExists: false };
+              }
+
+              const { name, version } = dep;
+
+              const { exists, versions } = await fetchNpmPackage(name, CACHE);
+
+              const versionExists = exists
+                ? checkVersionExists(versions, version)
+                : false;
+
+              return {
+                ...dep,
+                versionExists,
+              };
+            }),
+          ),
+        );
+      };
+
+      console.log("[action]: validating dependecies in npm registry...");
+      const dependencies = await processDeps(pkg.dependencies);
+      const devDependencies = await processDeps(pkg.devDependencies);
+
+      console.log("[action] done validating packages", "\n.\n.\n.");
+
+      return {
+        ...pkg,
+        dependencies,
+        devDependencies,
+      };
+    }),
+  );
+
+  await deleteExpiredCache(CACHE_PATH);
+  await saveToCache(CACHE_PATH, CACHE);
+
+  return promiseResult;
 }

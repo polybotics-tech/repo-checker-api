@@ -5,6 +5,13 @@ export function ErrorMiddleware(err, req, res, _) {
   const statusCode = err.statusCode || 500;
   const message = err.message || "Internal server error";
 
+  logbot.Error(
+    JSON.stringify({
+      err,
+      req: { body: req.body, params: req.params, query: req.query },
+    }),
+  );
+
   return FailedResponse(res, {
     statusCode,
     message,

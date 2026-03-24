@@ -2,7 +2,7 @@ import axios from "axios";
 import axiosRetry from "axios-retry";
 
 export const instance = axios.create({
-  timeout: 1000 * 15,
+  timeout: 1000 * 10,
   headers: {
     "User-Agent": "repo-checker-api",
   },
