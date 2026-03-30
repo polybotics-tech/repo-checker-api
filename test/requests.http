@@ -1,0 +1,12 @@
+
+### Analyze repositories from a local text file or place the link
+### (Run 'node extractor.js orgname' first to generate repos.txt)
+POST http://localhost:3000/v1/analyze
+Content-Type: application/json
+
+{
+  "filePath": "repos.txt",
+  "listPackages": false
+}
+
+### Use extractor.js to extract repos from a github profile
