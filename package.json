@@ -6,7 +6,7 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.js",
+    "dev": "NODEMON=true nodemon --verbose server.js",
     "start": "node server.js"
   },
   "keywords": [],
@@ -22,5 +22,16 @@
     "node-file-logger": "^0.9.5",
     "p-limit": "^7.3.0",
     "semver": "^7.7.4"
+  },
+  "nodemonConfig": {
+    "ignore": [
+      "cache/*",
+      "logs/*",
+      "node_modules/*",
+      "test/*",
+      ".env",
+      ".idea/*"
+    ],
+    "delay": "2500"
   }
 }

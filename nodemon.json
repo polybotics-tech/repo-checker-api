@@ -1,0 +1,11 @@
+{
+  "ignore": [
+    "cache/",
+    "logs/",
+    "node_modules/",
+    "*.log",
+    ".idea/"
+  ],
+  "delay": "1500",
+  "verbose": true
+}

@@ -1,3 +1,4 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import os from "os";
@@ -47,11 +48,14 @@ process.on("unhandledRejection", (reason, promise) => {
 });
 
 const PORT = process.env.PORT || 3000;
+const isDev = process.env.NODE_ENV === "development" || process.env.NODEMON === "true";
 
-const canCluster = os.cpus().length > 1 && typeof cluster.fork === "function";
+// Use isPrimary (Node 16+) or isMaster (older versions)
+const isPrimary = cluster.isPrimary || cluster.isMaster;
 
-if (canCluster) {
+if (!isDev && isPrimary && os.cpus().length > 1) {
   const numCPUs = os.cpus().length;
+  console.log(`Primary ${process.pid} is running. Forking ${numCPUs} workers...`);
 
   for (let i = 0; i < numCPUs; i++) {
     cluster.fork();
@@ -62,14 +66,18 @@ if (canCluster) {
     cluster.fork();
   });
 } else {
-  // running without clusterings
-  server.listen(PORT, () => {
+  // Running as a worker or in dev mode (no clustering)
+  const runningServer = server.listen(PORT, () => {
     console.log(
       `Server running on port ${PORT} ${
         cluster.isWorker ? `- Worker ${process.pid}` : ""
       }`,
     );
   });
+
+  // Set timeout to 0 (no timeout) for long-running batch requests
+  runningServer.timeout = 0;
+  runningServer.keepAliveTimeout = 0;
 }
 
 export default server;
