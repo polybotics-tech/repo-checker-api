@@ -10,3 +10,4 @@ Content-Type: application/json
 }
 
 ### Use extractor.js to extract repos from a github profile
+### Also create a .env file to include your github token
